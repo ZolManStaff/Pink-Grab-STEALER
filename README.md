@@ -26,4 +26,4 @@ CentBrowser
 📺Added grabber PC tech data
 ⏰Added implementation in auto start
 
-![alt text](https://github.com/[username]/[reponame]/blob/[branch]/image.jpg?raw=true)
+![alt text](https://raw.githubusercontent.com/ZolManStaff/Pink-Grab-STEALER/refs/heads/main/Скриншот%2026-12-2024%20145016.jpg)
